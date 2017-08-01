@@ -1,4 +1,4 @@
-import java.time.LocalDate;
+port java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -12,49 +12,68 @@ import java.util.concurrent.ConcurrentSkipListMap;
  * Created by fruitjazzy on 31.07.17.
  */
 public class Profiler {
-	// {2017-07-31 16:40=2017-07-31 16:40}
+	
 	static Map<String, String> table = new HashMap<>();
 	static ConcurrentSkipListMap<String, String[]> result = new ConcurrentSkipListMap<>(new ComparatorKeys());
 	static String[] keys;
 	static DateTimeFormatter format = DateTimeFormatter.ofPattern("d.MM.yyyy");
-
-
+	
 	static {
 		table.put("1.01.2017 09:00", "1.01.2017 09:45");
 		table.put("1.01.2017 10:00", "1.01.2017 10:00");
 		table.put("1.01.2017 10:30", "2.01.2017 12:45");
 		table.put("1.01.2017 11:00", "2.01.2017 12:45");
-		table.put("1.01.2017 11:30", "2.01.2017 12:45");
+		table.put("2.01.2017 11:30", "2.01.2017 12:45");
 	}
+	
 	public static void main(String[] args) {
-//		table.entrySet().parallelStream().forEach((e) -> {
-//
-//		});
-
 		int durationHour = 1;
 
 		initResultKeys(1, 2017, format);
+		prepareResultMap();
 
-		for (Map.Entry<String, String> m : table.entrySet()) {
-//			if (m.getValue().equals("") || m.getValue().equals("-")) {
-//				m.getKey()
-//			}
+		table.entrySet().parallelStream().forEach((e) -> {
+			if (e.getValue().equals("") || e.getValue().equals("-")) {
+				return;
+			}
 
-			String[] arrayStart = m.getKey().split("\\s");
-			LocalDate dateStart = LocalDate.parse(arrayStart[0], DateTimeFormatter.ofPattern("d.MM.yyyy"));
-			LocalTime timeStart = LocalTime.parse(arrayStart[1], DateTimeFormatter.ofPattern("HH:mm"));
+			String[] arrayStart = e.getKey().split("\\s");
+			LocalDate dateStart = getData(arrayStart[0]);
+			LocalTime timeStart = getHours(arrayStart[1]);
 
-			String[] arrayEnd = m.getValue().split("\\s");
-			LocalDate dateEnd = LocalDate.parse(arrayEnd[0], DateTimeFormatter.ofPattern("d.MM.yyyy"));
-			LocalTime timeEnd = LocalTime.parse(arrayEnd[1], DateTimeFormatter.ofPattern("HH:mm"));
+			String[] arrayEnd = e.getValue().split("\\s");
+			LocalDate dateEnd = getData(arrayEnd[0]);
+			LocalTime timeEnd = getHours(arrayEnd[1]);
 
 
 			int diff = getCalculateDiffHour(dateStart, timeStart, dateEnd, timeEnd);
+			int res = diff <= durationHour ? 0 : diff;
 
-
-		}
+			result.get(dateStart.format(format))[getIndex(timeStart)] = String.valueOf(res);
+		});
 
 		show();
+	}
+
+	private static int getIndex(LocalTime hh) {
+		String[] time = hh.toString().split(":");
+		return Integer.valueOf(time[0]);
+	}
+
+	private static void prepareResultMap() {
+		for (String key : keys) {
+			String[] val = new String[24];
+			prepareValues(val);
+			result.put(key, val);
+		}
+	}
+
+	private static LocalTime getHours(String text) {
+		return LocalTime.parse(text, DateTimeFormatter.ofPattern("HH:mm"));
+	}
+
+	private static LocalDate getData(String text) {
+		return LocalDate.parse(text, DateTimeFormatter.ofPattern("d.MM.yyyy"));
 	}
 
 	private static int getCalculateDiffHour(LocalDate dateStart, LocalTime timeStart, LocalDate dateEnd, LocalTime timeEnd) {
@@ -93,7 +112,6 @@ public class Profiler {
 		}
 	}
 
-
 	static String[] initResultKeys(int month, int year, DateTimeFormatter format) {
 		LocalDate startDate = LocalDate.of(year, month, 1);
 		keys = new String[startDate.lengthOfMonth()];
@@ -110,12 +128,5 @@ public class Profiler {
 
 	static int betweenDays(LocalDate start, LocalDate stop) {
 		return Math.abs((int) ChronoUnit.DAYS.between(start, stop));
-	}
-
-	static String getHour(int i) {
-		if (i < 10)
-			return "0" + i;
-		else
-			return "" + i;
 	}
 }

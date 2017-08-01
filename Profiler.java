@@ -1,4 +1,4 @@
-port java.time.LocalDate;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
@@ -12,12 +12,12 @@ import java.util.concurrent.ConcurrentSkipListMap;
  * Created by fruitjazzy on 31.07.17.
  */
 public class Profiler {
-	
-	static Map<String, String> table = new HashMap<>();
-	static ConcurrentSkipListMap<String, String[]> result = new ConcurrentSkipListMap<>(new ComparatorKeys());
-	static String[] keys;
-	static DateTimeFormatter format = DateTimeFormatter.ofPattern("d.MM.yyyy");
-	
+
+	private static Map<String, String> table = new HashMap<>();
+	private static ConcurrentSkipListMap<String, String[]> result = new ConcurrentSkipListMap<>(new ComparatorKeys());
+	private static String[] keys;
+	private static DateTimeFormatter format = DateTimeFormatter.ofPattern("d.MM.yyyy");
+
 	static {
 		table.put("1.01.2017 09:00", "1.01.2017 09:45");
 		table.put("1.01.2017 10:00", "1.01.2017 10:00");
@@ -25,18 +25,24 @@ public class Profiler {
 		table.put("1.01.2017 11:00", "2.01.2017 12:45");
 		table.put("2.01.2017 11:30", "2.01.2017 12:45");
 	}
-	
-	public static void main(String[] args) {
-		int durationHour = 1;
 
+	public static void main(String[] args) {
+		// допустимый период между началом и концом события
+		int period = 1;
+
+		// подготавливаем список ключей (дни месяца)
 		initResultKeys(1, 2017, format);
+
+		// подготавливаем карту с ключами дни месяца и массивом значений 0-23
 		prepareResultMap();
 
 		table.entrySet().parallelStream().forEach((e) -> {
+			// если пустое значение в таблице
 			if (e.getValue().equals("") || e.getValue().equals("-")) {
 				return;
 			}
 
+			// парсим данные из таблицы дату и часы
 			String[] arrayStart = e.getKey().split("\\s");
 			LocalDate dateStart = getData(arrayStart[0]);
 			LocalTime timeStart = getHours(arrayStart[1]);
@@ -46,10 +52,25 @@ public class Profiler {
 			LocalTime timeEnd = getHours(arrayEnd[1]);
 
 
+			// подсчитываем разницу между началом события и концом
 			int diff = getCalculateDiffHour(dateStart, timeStart, dateEnd, timeEnd);
-			int res = diff <= durationHour ? 0 : diff;
+			int res = diff <= period ? 0 : diff;
 
-			result.get(dateStart.format(format))[getIndex(timeStart)] = String.valueOf(res);
+
+			// получаем текущее значение за определенную дату и час
+			String val = result.get(dateStart.format(format))[getIndex(timeStart)];
+
+			Integer i;
+			try {
+				 i = Integer.valueOf(val);
+			}
+			catch (IllegalArgumentException x) {
+				i = 0;
+			}
+			
+			// прибавляем к тому что есть
+			val = String.valueOf(res + i);
+			result.get(dateStart.format(format))[getIndex(timeStart)] = val;
 		});
 
 		show();
